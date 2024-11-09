@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Background Remover</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: auto; /* Allow height to be auto for scrolling */
+            background: url(background.webp); /* Fallback gradient */
+            background-size: 200% 200%; /* Double size for animation */
+            animation: gradient-animation 10s ease infinite; /* Animation on background */
+            font-family: 'Arial', sans-serif;
+            color: white;
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 100px auto;
+            background: rgba(0, 0, 0, 0.829);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgb(52, 192, 9);
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center horizontally */
+            justify-content: center; /* Center vertically */
+            position: relative; /* Make the container relative for absolute positioning */
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .file-upload {
+            position: relative;
+            margin: 20px auto;
+            overflow: hidden;
+            border-radius: 5px;
+            background: #28a745;
+            transition: background 0.3s ease;
+            text-align: center;
+            padding: 20px;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            background: #218838;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            opacity: 0;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: block;
+            font-size: 16px;
+            color: white;
+        }
+
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: center;
+            position: relative; /* Make the result relative for absolute positioning of animation */
+            background-size: cover; /* Cover the entire section */
+            padding: 20px; /* Add some padding */
+            border-radius: 10px; /* Optional: Add rounded corners */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Optional: Add shadow for better visibility */
+        }
+
+        #result img {
+        max-width: 100%;
+        background: url(png-background.jpg); /* Ensures the image scales within its container */
+        max-height: 500px; /* Limit max height for larger images */
+        width: auto; /* Auto width to keep original aspect ratio */
+        height: auto; /* Auto height to keep original aspect ratio */
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Media query adjustments for mobile */
+    @media (max-width: 600px) {
+        #result img {
+            max-height: 300px; /* Smaller max-height for smaller screens */
+        }
+    }
+
+        #preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .hidden {
+            display: none;
+        }
+        #generatedAnimation, #loading dotlottie-player {
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 50px 20px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+</head>
+<body>
+    <div class="container">
+        <dotlottie-player id="mainAnimation" src="https://lottie.host/cd4adf1f-36c6-4d8c-8577-6eb311130aca/3HHt8nunu0.json" background="transparent" speed="1" style="width: 300px; height: 300px;" loop autoplay></dotlottie-player>
+        <h1>AI Background Remover</h1>
+        <form id="uploadForm">
+            <button type="submit" id="removeBackgroundButton">Remove Background</button>
+            <div class="file-upload">
+                <input type="file" name="file" accept="image/*" required id="fileInput">
+                <span class="file-upload-label">Choose File</span>
+            </div>
+        </form>
+        <div id="loading" class="hidden">
+            <dotlottie-player src="https://lottie.host/af98094a-34e3-4687-994c-f05671c1acbf/s1WC0NGjcM.json" background="transparent" speed="1" style="width: 300px; height: 300px;" loop autoplay></dotlottie-player>Processing... Please wait.
+        </div>
+        <div id="preview" class="hidden">
+            <h2>Selected Image</h2>
+            <img id="selectedImage" src="" alt="Selected Image">
+        </div>
+        <div id="result" class="hidden">
+            <div id="generatedAnimation" class="hidden">
+                <dotlottie-player src="https://lottie.host/76dd1543-6ccd-4eac-9245-372e678c6b9f/kqnk2vdvmX.json" background="transparent" speed="1" style="width: 100%; max-width: 300px;" loop autoplay></dotlottie-player>
+            </div>
+            <h2>Generated Image</h2>
+            <img id="resultImage" src="" alt="Result Image">
+            <button id="downloadButton" class="hidden">Download Image</button>
+            <button id="regenerateButton" class="hidden">Regenerate Image</button>
+        </div>
+    </div>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const selectedImage = document.getElementById('selectedImage');
+        const preview = document.getElementById('preview');
+        const removeBackgroundButton = document.getElementById('removeBackgroundButton');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultImage = document.getElementById('resultImage');
+        const downloadButton = document.getElementById('downloadButton');
+        const regenerateButton = document.getElementById('regenerateButton');
+        const mainAnimation = document.getElementById('mainAnimation');
+        const generatedAnimation = document.getElementById('generatedAnimation');
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    selectedImage.src = event.target.result;
+                    preview.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('uploadForm').onsubmit = async function(event) {
+    event.preventDefault();
+    loading.style.display = 'block';
+    mainAnimation.style.display = 'none';
+    generatedAnimation.classList.add('hidden');
+    result.classList.add('hidden');
+    removeBackgroundButton.style.display = 'none';
+    fileInput.parentElement.style.display = 'none';
+    preview.classList.add('hidden');
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+    const response = await fetch('https://api.deepai.org/api/remove-bg', {
+        method: 'POST',
+        headers: {
+            'Api-Key': '08e9e529-536b-41da-beac-0bd0fc499524',
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorResponse = await response.json();
+        throw new Error(`Error removing background: ${errorResponse.message || response.statusText}`);
+    }
+
+    const resultData = await response.json();
+    resultImage.src = resultData.output_url;
+    result.classList.remove('hidden');
+    loading.style.display = 'none';
+    generatedAnimation.classList.remove('hidden');
+    downloadButton.classList.remove('hidden');
+    regenerateButton.classList.remove('hidden');
+} catch (error) {
+    console.error('Error:', error);
+    alert('Failed to remove background: ' + error.message);
+    loading.style.display = 'none';
+    mainAnimation.style.display = 'block';
+}
+        };
+
+        downloadButton.addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.href = resultImage.src;
+            link.download = 'generated-image.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        regenerateButton.addEventListener('click', function() {
+            removeBackgroundButton.style.display = 'block';
+            fileInput.parentElement.style.display = 'block';
+            result.classList.add('hidden');
+            preview.classList.add('hidden');
+            selectedImage.src = '';
+            fileInput.value = '';
+            mainAnimation.style.display = 'block'; // Show the main animation again
+            generatedAnimation.classList.add('hidden'); // Hide the generated animation
+        });
+    </script>
+</body>
+</html>

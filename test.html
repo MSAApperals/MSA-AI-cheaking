@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image History</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <style>
+        /* General Styles */
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh; 
+            background: linear-gradient(45deg, #4c66db, #324ace, #eb3939, #195c92, #6344ac);
+            background-size: 200% 200%; 
+            animation: gradient-animation 10s ease infinite; 
+            font-family: 'Arial', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Header Styles */
+        .button {
+            background-color: #ff61a6;
+            color: white;
+            box-shadow: 0px 2px 3px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            position: fixed;
+            z-index: 100;
+        }
+        #homeButton {
+            top: 10px;
+            left: 10px;
+        }
+        #historyButton {
+            top: 10px;
+            right: 40px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #222;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            color: white;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #ff0000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* History Styles */
+        #historyContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            margin: 10px;
+            text-align: center;
+        }
+
+        .history-item img {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .history-item img:hover {
+            transform: scale(1.1);
+        }
+
+        button {
+            background-color: #ff61a6;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background-color: #ff61d6;
+        }
+
+        /* Loading Overlay Styles */
+        #loadingOverlay {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.7); 
+            z-index: 10000; 
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #333;
+            visibility: hidden; }
+
+        #loadingOverlay dotlottie-player {
+            z-index: 1000001; 
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html"> <button id="homeButton" class="button"><i class="fas fa-home"></i></button></a>
+    <button id="historyButton" class="button"><i class="fas fa-history"></i></button>
+
+    <div id="loadingOverlay" class="overlay">
+        <dotlottie-player src="https://lottie.host/3356f4dd-d273-40e9-9c78-ba41902be50f/otpTrhP6ZL.json" background="transparent" speed="1" style="width: 400px; height: 400px;" loop autoplay></dotlottie-player>
+        <p>Loading history...</p>
+    </div>
+
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span id="closeHistoryModal" class="close">&times;</span>
+            <h2>Image History</h2>
+            <div id="historyContainer"></div>
+            <div id="loadingHistoryIndicator">
+                <dotlottie-player src="https://lottie.host/3356f4dd-d273-40e9-9c78-ba41902be50f/otpTrhP6ZL.json" background="transparent" speed="1" style="width: 100px; height: 100px;" loop autoplay></dotlottie-player>
+                <p>Loading history...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Supabase client
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // Your Supabase credentials
+        const supabaseUrl = 'https://qaorluewrsbvlkuihnnp.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhb3JsdWV3cnNidmxrdWlobm5wIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMDU0NDk4MCwiZXhwIjoyMDQ2MTIwOTgwfQ.CL3fV4oPIm7usBjSze-TFIP1AhYpuK8Sc9-R6KtXNhU';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Store image history
+        let imageHistory = [];
+
+        // Load history from localStorage on page load
+        window.onload = () => {
+            const storedHistory = localStorage.getItem('imageHistory');
+            if (storedHistory) {
+                imageHistory = JSON.parse(storedHistory);
+                updateHistoryDisplay();
+            }
+        };
+
+        // Function to update the history display
+        async function updateHistoryDisplay() {
+            const historyContainer = document.getElementById('historyContainer');
+            historyContainer.innerHTML = ''; // Clear previous history
+
+            // Show loading indicator while checking history
+            const loadingIndicator = document.getElementById('loadingHistoryIndicator');
+            loadingIndicator.style.display = 'block';
+
+            // Check if the user is logged in
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            if (!userData) {
+                const loginMessage = document.createElement('p');
+                loginMessage.textContent = 'Login to view your history.';
+                loginMessage.classList.add('error'); // Add error class for styling
+                historyContainer.appendChild(loginMessage);
+
+                // Create a login button
+                const loginButton = document.createElement('button');
+                loginButton.textContent = 'Login';
+                loginButton.classList.add('button', 'login-button'); // Add the new class for styling
+                loginButton.addEventListener('click', () => {
+                    window.location.href = 'index.html'; // Redirect to login page
+                });
+                historyContainer.appendChild(loginButton);
+
+                loadingIndicator.style.display = 'none'; // Hide loading indicator
+                return; // Exit the function since the user is not logged in
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('image_history')
+                    .select('*')
+                    .eq('email', userData.email);
+
+                if (error) throw error;
+
+                // Check if there are any images in history
+                if (data.length === 0) {
+                    const noHistoryMessage = document.createElement('p');
+                    noHistoryMessage.textContent = 'No history available.';
+                    historyContainer.appendChild(noHistoryMessage);
+                } else {
+                    // Load images into the history container
+                    data.forEach((imageData) => {
+                        const imageElement = document.createElement('img');
+                        imageElement.src = imageData.image_data; // Use base64 data
+                        imageElement.alt = "Generated Image";
+                        imageElement.style.width = '100px';
+                        imageElement.style.height = '100px';
+                        imageElement.style.margin = '10px';
+                        historyContainer.appendChild(imageElement);
+
+                        const promptElement = document.createElement('p');
+                        promptElement.textContent = `Prompt: ${imageData.prompt}`;
+                        historyContainer.appendChild(promptElement);
+
+                        // Add copy button for each image in history
+                        const copyButton = document.createElement('button');
+                        copyButton.textContent = 'Copy prompt';
+                        copyButton.addEventListener('click', () => {
+                            // Copy the promo code to the clipboard
+                            navigator.clipboard.writeText(imageData.prompt) // Assuming the promo code is stored in prompt
+                                .then(() => {
+                                    alert('Text copied to clipboard!');
+                                })
+                                .catch(err => {
+                                    console.error('Failed to copy: ', err);
+                                });
+                        });
+                        historyContainer.appendChild(copyButton);
+
+                        // Add download button for each image in history
+                        const downloadButton = document.createElement('button');
+                        downloadButton.textContent = 'Download';
+                        downloadButton.addEventListener('click', () => {
+                            const link = document.createElement('a');
+                            link.href = imageData.image_data;
+                            link.download = `image-${imageData.id}.jpg`; // Set default file name
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
+                        historyContainer.appendChild(downloadButton);
+
+                        // Add delete button for each image in history
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.addEventListener('click', async () => {
+                            // Remove the image from Supabase
+                            const { error } = await supabase
+                                .from('image_history')
+                                .delete()
+                                .eq('id', imageData.id);
+
+                            if (error) throw error;
+
+                            // Refresh the history display
+                            updateHistoryDisplay();
+                        });
+                        historyContainer.appendChild(deleteButton);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching image history:', error);
+            } finally {
+                loadingIndicator.style.display = 'none'; // Hide loading indicator
+            }
+        }
+
+        // Close history modal button functionality
+        document.getElementById('closeHistoryModal').addEventListener('click', () => {
+            const historyModal = document.getElementById('historyModal');
+            historyModal.style.display = 'none';
+        });
+
+        // History button functionality
+        document.getElementById('historyButton').addEventListener('click', () => {
+            const historyModal = document.getElementById('historyModal');
+            historyModal.style.display = 'block';
+
+            // Show loading indicator while loading history
+            const loadingIndicator = document.getElementById('loadingHistoryIndicator');
+            loadingIndicator.style.display = 'block';
+
+            // Display image history
+            updateHistoryDisplay();
+        });
+    </script>
+</body>
+</html>

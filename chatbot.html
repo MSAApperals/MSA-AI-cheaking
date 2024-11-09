@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Chatbot</title>
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <style>
+        body {
+            font-family: 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        #chatbot {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        #chatbox {
+            width: 350px;
+            height: 500px;
+            background-image: url('chat-background1.jpg'); /* Replace with your image URL */
+            background-size: cover;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #header {
+            background-color: rgba(0, 123, 255, 0.8);
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        #closeBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #userInputArea {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #e0e0e0;
+            background-color: rgba(250, 250, 250, 0.8);
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #userInput:focus {
+            border-color: #007BFF;
+        }
+
+        .message {
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            max-width: 70%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .userMessage {
+            background-color: #007BFF;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .aiMessage {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        #floatingBtn {
+            width: 120px;
+            height: 120px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="chatbot">
+        <div id="chatbox">
+            <div id="header">
+                AI Chatbot
+                <button id="closeBtn">&times;</button>
+            </div>
+            <div id="messages"></div>
+            <div id="userInputArea">
+                <input type="text" id="userInput" placeholder="Type a message..." />
+                <button id="sendButton" style="margin-left: 10px; padding: 10px; border: none; background-color: #007BFF; color: white; border-radius: 5px; cursor: pointer;">Send</button>
+            </div>
+        </div>
+        <!-- Updated floating button with lottie animation -->
+        <div id="floatingBtn">
+            <dotlottie-player src="https://lottie.host/45654979-1135-4465-8376-7e6f9f79112f/FeptbThHjc.json"
+                background="transparent" speed="1" style="width: 380px; height: 380px;" loop autoplay>
+            </dotlottie-player>
+        </div>
+    </div>
+
+    <script>
+        const floatingBtn = document.getElementById('floatingBtn');
+        const chatbox = document.getElementById('chatbox');
+        const messages = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const closeBtn = document.getElementById('closeBtn');
+
+        floatingBtn.onclick = () => {
+            chatbox.style.display = chatbox.style.display === 'none' || chatbox.style.display === '' ? 'flex' : 'none';
+            userInput.focus();
+        };
+
+        closeBtn.onclick = () => {
+            chatbox.style.display = 'none';
+        };
+
+        sendButton.onclick = sendMessage;
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (text) {
+                appendMessage('User', text);
+                userInput.value = '';
+                await fetchAIResponse(text);
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const message = document.createElement('div');
+            message.classList.add('message');
+            message.classList.add(sender === 'User' ? 'userMessage' : 'aiMessage');
+            message.textContent = text;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function fetchAIResponse(message) {
+            const loadingMessage = document.createElement('div');
+            loadingMessage.textContent = 'AI is typing...';
+            loadingMessage.classList.add('message', 'aiMessage');
+            messages.appendChild(loadingMessage);
+            messages.scrollTop = messages.scrollHeight;
+
+            try {
+                const response = await fetch('https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer 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`, // Replace with your API key
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ inputs: message }),
+                });
+
+                const data = await response.json();
+                const aiResponse = data[0]?.generated_text || 'Sorry, I am unable to process that right now.';
+                messages.removeChild(loadingMessage);
+                appendMessage('AI', aiResponse);
+            } catch (error) {
+                console.error('Error:', error);
+                messages.removeChild(loadingMessage);
+                appendMessage('AI', 'Sorry, there was an error processing your request.');
+            }
+        }
+    </script>
+</body>
+</html>
